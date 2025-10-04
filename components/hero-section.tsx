@@ -26,6 +26,8 @@ export function HeroSection() {
   const [textOpacity, setTextOpacity] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const [hoveredLayer, setHoveredLayer] = useState<string | null>(null)
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [hoveredLayerData, setHoveredLayerData] = useState<AtmosphereLayer | null>(null)
 
   // Callback to handle interaction state changes
   const handleInteractionStart = useCallback(() => {
@@ -136,15 +138,47 @@ export function HeroSection() {
             y: -((event.clientY - rect.top) / rect.height) * 2 + 1,
           }
 
+          // Update mouse position for tooltip
+          setMousePosition({ x: event.clientX, y: event.clientY })
+
           raycaster.setFromCamera(mouse, camera)
           const intersects = raycaster.intersectObjects(layerMeshes)
 
           if (intersects.length > 0) {
             const layerName = intersects[0].object.userData.name
+            const layerData = layers.find(layer => layer.name === layerName)
+            console.log('Hovered layer:', layerName, layerData) // Debug log
             setHoveredLayer(layerName)
+            setHoveredLayerData(layerData || null)
             document.body.style.cursor = "pointer"
+            
+            // Enhanced hover effects for main layers
+            layerMeshes.forEach(mesh => {
+              if (mesh.userData.name === layerName) {
+                mesh.material.opacity = mesh.userData.originalOpacity * 2.2
+              } else {
+                mesh.material.opacity = mesh.userData.originalOpacity
+              }
+            })
+
+            // Enhanced hover effects for edge meshes
+            edgeMeshes.forEach(mesh => {
+              if (mesh.userData.parentLayer === layerName) {
+                mesh.material.uniforms.intensity.value = mesh.userData.originalIntensity * 1.8
+              } else {
+                mesh.material.uniforms.intensity.value = mesh.userData.originalIntensity
+              }
+            })
           } else {
+            // Reset all layer effects
+            layerMeshes.forEach(mesh => {
+              mesh.material.opacity = mesh.userData.originalOpacity
+            })
+            edgeMeshes.forEach(mesh => {
+              mesh.material.uniforms.intensity.value = mesh.userData.originalIntensity
+            })
             setHoveredLayer(null)
+            setHoveredLayerData(null)
             document.body.style.cursor = isDragging ? "grabbing" : "grab"
           }
 
@@ -311,6 +345,7 @@ export function HeroSection() {
         ]
 
         const layerMeshes: any[] = []
+        const edgeMeshes: any[] = []
 
         layers.forEach((layer, index) => {
           const geometry = new THREE.SphereGeometry(layer.altitude, 64, 64)
@@ -321,7 +356,11 @@ export function HeroSection() {
             side: THREE.BackSide,
           })
           const mesh = new THREE.Mesh(geometry, material)
-          mesh.userData = { name: layer.name, description: layer.description }
+          mesh.userData = { 
+            name: layer.name, 
+            description: layer.description,
+            originalOpacity: layer.opacity
+          }
           scene.add(mesh)
           layerMeshes.push(mesh)
 
@@ -354,7 +393,13 @@ export function HeroSection() {
             blending: THREE.AdditiveBlending,
           })
           const edgeMesh = new THREE.Mesh(edgeGeometry, edgeMaterial)
+          edgeMesh.userData = { 
+            name: layer.name + "_edge",
+            originalIntensity: 0.8,
+            parentLayer: layer.name
+          }
           scene.add(edgeMesh)
+          edgeMeshes.push(edgeMesh)
 
           // Add particles for LEO Zone
           if (layer.name === "LEO Zone") {
@@ -391,34 +436,111 @@ export function HeroSection() {
           }
         })
 
-        // Add space station
-        const stationGeometry = new THREE.SphereGeometry(0.2, 16, 16)
-        const stationMaterial = new THREE.MeshBasicMaterial({
-          color: 0xff6b00,
-          emissive: 0xff6b00,
-          emissiveIntensity: 0.5,
+        // Add beautiful moon satellite
+        const moonGeometry = new THREE.SphereGeometry(0.35, 32, 32)
+        
+        // Create realistic moon material with crater texture
+        const moonMaterial = new THREE.MeshPhongMaterial({
+          color: 0xe8e8e8,        // Light gray moon color
+          emissive: 0x2a2a2a,     // Subtle self-illumination
+          emissiveIntensity: 0.1,
+          shininess: 1,           // Very low shininess for realistic moon
+          specular: 0x222222,     // Minimal specular reflection
         })
-        const station = new THREE.Mesh(stationGeometry, stationMaterial)
-        station.position.set(9.5, 0, 0)  // Updated to match new LEO zone altitude
-        scene.add(station)
+        
+        // Create procedural moon texture with craters
+        const createMoonTexture = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = 256
+          canvas.height = 256
+          const context = canvas.getContext('2d')!
+          
+          // Base moon surface - light gray
+          context.fillStyle = '#e8e8e8'
+          context.fillRect(0, 0, 256, 256)
+          
+          // Add darker maria (lunar seas)
+          context.fillStyle = '#c0c0c0'
+          context.beginPath()
+          context.ellipse(80, 60, 25, 35, 0, 0, Math.PI * 2)
+          context.fill()
+          context.beginPath()
+          context.ellipse(160, 120, 30, 20, 0, 0, Math.PI * 2)
+          context.fill()
+          context.beginPath()
+          context.ellipse(200, 80, 15, 25, 0, 0, Math.PI * 2)
+          context.fill()
+          
+          // Add craters of various sizes
+          const addCrater = (x: number, y: number, radius: number, darkness: number) => {
+            const gradient = context.createRadialGradient(x, y, 0, x, y, radius)
+            gradient.addColorStop(0, `rgba(80, 80, 80, ${darkness})`)
+            gradient.addColorStop(0.7, `rgba(120, 120, 120, ${darkness * 0.5})`)
+            gradient.addColorStop(1, 'rgba(180, 180, 180, 0)')
+            context.fillStyle = gradient
+            context.beginPath()
+            context.arc(x, y, radius, 0, Math.PI * 2)
+            context.fill()
+          }
+          
+          // Large craters
+          addCrater(120, 100, 20, 0.6)
+          addCrater(180, 180, 15, 0.5)
+          addCrater(60, 180, 18, 0.4)
+          
+          // Medium craters
+          addCrater(200, 50, 8, 0.4)
+          addCrater(50, 80, 10, 0.3)
+          addCrater(150, 200, 12, 0.5)
+          
+          // Small craters
+          for (let i = 0; i < 15; i++) {
+            const x = Math.random() * 256
+            const y = Math.random() * 256
+            const radius = 3 + Math.random() * 5
+            addCrater(x, y, radius, 0.2 + Math.random() * 0.2)
+          }
+          
+          return new THREE.CanvasTexture(canvas)
+        }
+        
+        const moonTexture = createMoonTexture()
+        moonMaterial.map = moonTexture
+        
+        const moon = new THREE.Mesh(moonGeometry, moonMaterial)
+        moon.position.set(9.5, 0, 0)
+        scene.add(moon)
 
-        // Station glow
-        const stationGlowGeometry = new THREE.SphereGeometry(0.35, 16, 16)
-        const stationGlowMaterial = new THREE.MeshBasicMaterial({
-          color: 0xff6b00,
+        // Soft lunar glow - much subtler than sun
+        const moonGlowGeometry = new THREE.SphereGeometry(0.5, 32, 32)
+        const moonGlowMaterial = new THREE.MeshBasicMaterial({
+          color: 0xc8c8d8,        // Soft blue-white glow
           transparent: true,
-          opacity: 0.3,
+          opacity: 0.15,          // Very subtle glow
+          blending: THREE.AdditiveBlending,
         })
-        const stationGlow = new THREE.Mesh(stationGlowGeometry, stationGlowMaterial)
-        stationGlow.position.copy(station.position)
-        scene.add(stationGlow)
+        const moonGlow = new THREE.Mesh(moonGlowGeometry, moonGlowMaterial)
+        moonGlow.position.copy(moon.position)
+        scene.add(moonGlow)
+        
+        // Outer atmospheric glow
+        const moonHaloGeometry = new THREE.SphereGeometry(0.7, 32, 32)
+        const moonHaloMaterial = new THREE.MeshBasicMaterial({
+          color: 0xa8a8b8,        // Even softer outer glow
+          transparent: true,
+          opacity: 0.08,
+          blending: THREE.AdditiveBlending,
+        })
+        const moonHalo = new THREE.Mesh(moonHaloGeometry, moonHaloMaterial)
+        moonHalo.position.copy(moon.position)
+        scene.add(moonHalo)
 
-        // Orbital path
-        const orbitGeometry = new THREE.RingGeometry(9.3, 9.7, 128)  // Updated ring to match new LEO zone
+        // Elegant orbital path - silver/white
+        const orbitGeometry = new THREE.RingGeometry(9.3, 9.7, 128)
         const orbitMaterial = new THREE.MeshBasicMaterial({
-          color: 0xff6b00,
+          color: 0xc8c8d8,        // Silver-white orbit trail
           transparent: true,
-          opacity: 0.4,
+          opacity: 0.25,          // More subtle than sun orbit
           side: THREE.DoubleSide,
         })
         const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial)
@@ -521,10 +643,22 @@ export function HeroSection() {
           camera.position.z = Math.cos(cameraRotation.y) * Math.cos(cameraRotation.x) * newDistance
           camera.lookAt(0, 0, 0)
 
-          // Animate station orbit realistically
-          station.position.x = Math.cos(time * 0.5) * 9.5  // Updated to match new LEO zone
-          station.position.z = Math.sin(time * 0.5) * 9.5  // Updated to match new LEO zone
-          stationGlow.position.copy(station.position)
+          // Animate moon orbit with realistic lunar motion
+          const moonOrbitSpeed = 0.3  // Slower than typical satellites
+          moon.position.x = Math.cos(time * moonOrbitSpeed) * 9.5
+          moon.position.z = Math.sin(time * moonOrbitSpeed) * 9.5
+          
+          // Realistic moon rotation (tidally locked - same face toward Earth)
+          moon.rotation.y = time * moonOrbitSpeed
+          
+          // Update glow positions
+          moonGlow.position.copy(moon.position)
+          moonHalo.position.copy(moon.position)
+          
+          // Subtle pulsing effect for moon glow (very gentle)
+          const moonPulse = 1 + Math.sin(time * 1.5) * 0.1
+          moonGlow.scale.setScalar(moonPulse)
+          moonHalo.scale.setScalar(moonPulse * 0.8)
 
           // Animate particles
           scene.children.forEach((child: any) => {
@@ -532,6 +666,16 @@ export function HeroSection() {
               child.rotation.y += 0.01
             }
           })
+
+          // Enhanced hover animation for LEO Zone
+          if (hoveredLayer === "LEO Zone") {
+            edgeMeshes.forEach(mesh => {
+              if (mesh.userData.parentLayer === "LEO Zone") {
+                const pulse = 0.5 + 0.5 * Math.sin(time * 3) // Pulse effect
+                mesh.material.uniforms.intensity.value = mesh.userData.originalIntensity * (1.8 + pulse * 0.5)
+              }
+            })
+          }
 
           renderer.render(scene, camera)
           animationFrameId = requestAnimationFrame(animate)
@@ -588,17 +732,41 @@ export function HeroSection() {
         </div>
       )}
 
-      {/* Layer information tooltip */}
-      {hoveredLayer && (
-        <div className="absolute top-20 left-4 z-30 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-4 max-w-xs">
-          <h4 className="font-semibold text-primary mb-1">{hoveredLayer}</h4>
-          <p className="text-sm text-muted-foreground">
-            {hoveredLayer === "LEO Zone" && "Low Earth Orbit - Where Oriviet operates"}
-            {hoveredLayer === "Thermosphere" && "85-600 km - Aurora layer with extreme temperatures"}
-            {hoveredLayer === "Mesosphere" && "50-85 km - Where meteors burn up"}
-            {hoveredLayer === "Stratosphere" && "12-50 km - Contains the ozone layer"}
-            {hoveredLayer === "Troposphere" && "0-12 km - Weather and life layer"}
-          </p>
+      {/* Dynamic layer information tooltip */}
+      {hoveredLayer && hoveredLayerData && typeof window !== 'undefined' && (
+        <div 
+          className="fixed z-50 bg-card/95 backdrop-blur-md border border-border rounded-lg p-4 max-w-xs shadow-2xl pointer-events-none transition-all duration-200"
+          style={{ 
+            left: mousePosition.x + 15, 
+            top: mousePosition.y - 10,
+            transform: mousePosition.x > (window?.innerWidth || 1920) - 200 ? 'translateX(-100%)' : 'translateX(0)'
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div 
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: `#${hoveredLayerData.color.toString(16).padStart(6, '0')}` }}
+            />
+            <h4 className="font-semibold text-primary text-sm">{hoveredLayerData.name}</h4>
+          </div>
+          <p className="text-xs text-muted-foreground mb-2">{hoveredLayerData.description}</p>
+          <div className="text-xs space-y-1">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Altitude:</span>
+              <span className="text-foreground font-medium">
+                {hoveredLayerData.name === "LEO Zone" && "160-2000 km"}
+                {hoveredLayerData.name === "Thermosphere" && "85-600 km"}
+                {hoveredLayerData.name === "Mesosphere" && "50-85 km"}
+                {hoveredLayerData.name === "Stratosphere" && "12-50 km"}
+                {hoveredLayerData.name === "Troposphere" && "0-12 km"}
+              </span>
+            </div>
+            {hoveredLayerData.name === "LEO Zone" && (
+              <div className="pt-2 border-t border-border/50">
+                <span className="text-primary text-xs font-medium">🚀 Oriviet Operations Zone</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -629,7 +797,7 @@ export function HeroSection() {
           className="text-5xl md:text-7xl font-bold mb-6 text-balance leading-tight select-none"
           style={{ pointerEvents: "auto" }}
         >
-          <span className="block text-transparent bg-gradient-to-r from-primary via-accent to-primary bg-clip-text">
+          <span className="block text-glow relative">
             Oriviet
           </span>
           <span className="block text-3xl md:text-4xl mt-4 text-muted-foreground font-normal">
@@ -700,6 +868,41 @@ export function HeroSection() {
           -moz-user-select: none;
           -ms-user-select: none;
           user-select: none;
+        }
+
+        /* Glow effect behind Oriviet text */
+        .text-glow {
+          color: #ffffff;
+          position: relative;
+          z-index: 2;
+        }
+
+        .text-glow::before {
+          content: 'Oriviet';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          color: transparent;
+          background: linear-gradient(45deg, #00d4ff, #0099ff, #00d4ff);
+          background-clip: text;
+          -webkit-background-clip: text;
+          filter: blur(8px);
+          z-index: -1;
+          opacity: 0.6;
+          animation: glow-pulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow-pulse {
+          from {
+            filter: blur(8px);
+            opacity: 0.6;
+          }
+          to {
+            filter: blur(12px);
+            opacity: 0.4;
+          }
         }
       `}</style>
     </section>
