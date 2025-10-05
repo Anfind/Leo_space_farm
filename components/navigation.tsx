@@ -37,9 +37,9 @@ export function Navigation() {
             <Image 
               src="/aero-labs-logo.png" 
               alt="Aero Labs Logo" 
-              width={320} 
-              height={107}
-              className="h-12 w-auto"
+              width={480} 
+              height={160}
+              className="h-16 w-auto"
               priority
             />
           </div>
