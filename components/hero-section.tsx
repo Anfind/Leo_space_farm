@@ -491,11 +491,11 @@ export function HeroSection() {
                   satellite.position.set(leoOrbitRadius, 0, 0)
                   
                   // Add glowing effect để thấy trong không gian
-                  const glowGeometry = new THREE.SphereGeometry(0.8, 16, 16)
+                  const glowGeometry = new THREE.SphereGeometry(1.2, 16, 16) // Increased from 0.8
                   const glowMaterial = new THREE.MeshBasicMaterial({
                     color: 0x00aaff,
                     transparent: true,
-                    opacity: 0.2,
+                    opacity: 0.25, // Increased from 0.2
                     blending: THREE.AdditiveBlending,
                   })
                   const glow = new THREE.Mesh(glowGeometry, glowMaterial)
