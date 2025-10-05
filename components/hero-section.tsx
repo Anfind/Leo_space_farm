@@ -479,7 +479,7 @@ export function HeroSection() {
                   const maxDim = Math.max(size.x, size.y, size.z)
                   let scale = 1
                   if (maxDim > 0) {
-                    scale = 2.0 / maxDim  // Reduced back from 4.0 to 2.0
+                    scale = 3.0 / maxDim  // Reduced back from 4.0 to 2.0
                   }
                   satellite.scale.setScalar(scale)
                   
@@ -490,12 +490,12 @@ export function HeroSection() {
                   
                   satellite.position.set(leoOrbitRadius, 0, 0)
                   
-                  // Moderate glowing effect
-                  const glowGeometry = new THREE.SphereGeometry(1.0, 16, 16) // Reduced from 2.0
+                  // Subtle glowing effect - smaller and dimmer
+                  const glowGeometry = new THREE.SphereGeometry(0.6, 16, 16) // Much smaller from 1.0
                   const glowMaterial = new THREE.MeshBasicMaterial({
-                    color: 0x00ccff, // Keep bright cyan color
+                    color: 0x00aadd, // Slightly dimmer cyan
                     transparent: true,
-                    opacity: 0.3, // Reduced from 0.4
+                    opacity: 0.15, // Much dimmer from 0.3
                     blending: THREE.AdditiveBlending,
                   })
                   const glow = new THREE.Mesh(glowGeometry, glowMaterial)
@@ -506,7 +506,7 @@ export function HeroSection() {
                     type: 'aerolabsSatellite',
                     leoInnerRadius: leoInnerRadius,
                     leoOuterRadius: leoInnerRadius + 0.6, // LEO zone outer boundary
-                    movementSpeed: 0.003,      // Speed of free movement
+                    movementSpeed: 0.008,      // Increased speed for visible movement
                     rotationSpeed: 0.002,      // Self rotation speed
                     phaseX: Math.random() * Math.PI * 2,  // Random phase for X movement
                     phaseY: Math.random() * Math.PI * 2,  // Random phase for Y movement
@@ -578,7 +578,7 @@ export function HeroSection() {
                     type: 'aerolabsSatellite',
                     leoInnerRadius: layer.altitude - 0.3,
                     leoOuterRadius: layer.altitude + 0.3,
-                    movementSpeed: 0.003,
+                    movementSpeed: 0.008,  // Increased speed
                     rotationSpeed: 0.002,
                     phaseX: Math.random() * Math.PI * 2,
                     phaseY: Math.random() * Math.PI * 2,
@@ -830,42 +830,42 @@ export function HeroSection() {
               child.rotation.y += 0.01
             }
             
-            // 🛰️ Animate AeroLabs Satellite with TRUE free-floating motion in LEO Zone
+            // 🛰️ Animate AeroLabs Satellite with ENHANCED free-floating motion in LEO Zone
             if (child.userData.type === "aerolabsSatellite") {
               const userData = child.userData
               const t = time * userData.movementSpeed
               
-              // Calculate 3D position using multiple sine waves for natural movement
+              // Calculate 3D position with stronger movement
               const radiusVariation = userData.leoInnerRadius + 
                 (userData.leoOuterRadius - userData.leoInnerRadius) * 
                 (0.5 + 0.5 * Math.sin(t + userData.phaseX))
               
-              // 3D coordinates with independent movement on each axis
-              const angleXZ = t * 0.7 + userData.phaseX  // Rotation around Y axis
-              const angleY = t * 0.5 + userData.phaseY   // Up/down movement
+              // 3D coordinates with MORE pronounced movement
+              const angleXZ = t * 1.2 + userData.phaseX  // Faster rotation around Y axis
+              const angleY = t * 0.8 + userData.phaseY   // Faster up/down movement
               
               child.position.x = Math.cos(angleXZ) * radiusVariation
               child.position.z = Math.sin(angleXZ) * radiusVariation
-              child.position.y = Math.sin(angleY + userData.phaseZ) * 1.5  // Vertical movement range
+              child.position.y = Math.sin(angleY + userData.phaseZ) * 2.5  // BIGGER vertical range
               
-              // Add additional floating motion for more natural movement
-              child.position.x += Math.sin(t * 1.3 + userData.phaseY) * 0.8
-              child.position.z += Math.cos(t * 1.1 + userData.phaseZ) * 0.8
-              child.position.y += Math.cos(t * 0.9 + userData.phaseX) * 0.5
+              // Add MORE floating motion for visible movement
+              child.position.x += Math.sin(t * 2.1 + userData.phaseY) * 1.2  // Increased amplitude
+              child.position.z += Math.cos(t * 1.8 + userData.phaseZ) * 1.2  // Increased amplitude
+              child.position.y += Math.cos(t * 1.5 + userData.phaseX) * 1.0  // Bigger vertical float
               
               // Multi-axis rotation for realistic tumbling
               child.rotation.x += userData.rotationSpeed * 0.7
               child.rotation.y += userData.rotationSpeed
               child.rotation.z += userData.rotationSpeed * 0.4
               
-              // Update glow position and enhanced pulsing
+              // Update glow position and reduce pulsing intensity
               if (userData.glow) {
                 userData.glow.position.copy(child.position)
                 
-                // Natural pulsing effect
-                const pulse = 1 + Math.sin(t * 2 + userData.phaseX) * 0.2
+                // Subtle pulsing effect
+                const pulse = 1 + Math.sin(t * 2 + userData.phaseX) * 0.1  // Reduced pulsing
                 userData.glow.scale.setScalar(pulse)
-                userData.glow.material.opacity = 0.3 + Math.sin(t * 1.5 + userData.phaseY) * 0.1
+                userData.glow.material.opacity = 0.15 + Math.sin(t * 1.5 + userData.phaseY) * 0.05  // Dimmer
               }
             }
           })
