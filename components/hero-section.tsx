@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowDown, Sparkles } from "lucide-react"
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 interface AtmosphereLayer {
   name: string
@@ -433,6 +435,168 @@ export function HeroSection() {
             const particles = new THREE.Points(particleGeometry, particleMaterial)
             particles.userData = { type: "leoParticles" }
             scene.add(particles)
+
+            // 🛰️ Load AeroLabs Satellite GLB INSIDE LEO Zone (based on test folder approach)
+            const loadAeroLabsSatellite = () => {
+              console.log('🛰️ Starting AeroLabs Satellite loading...')
+              const gltfLoader = new GLTFLoader()
+              
+              gltfLoader.load(
+                '/AeroLabs Satellite.glb',
+                (gltf) => {
+                  console.log('✅ AeroLabs Satellite loaded successfully!', gltf)
+                  
+                  const satellite = gltf.scene
+                  
+                  // Apply test folder approach - disable shadows
+                  satellite.traverse((child) => {
+                    if (child.isMesh) {
+                      child.castShadow = false
+                      child.receiveShadow = false
+                      
+                      // Normal materials - less bright blue
+                      if (child.material) {
+                        child.material.metalness = 0.8
+                        child.material.roughness = 0.2
+                        child.material.emissive = new THREE.Color(0x001122) // Much dimmer blue
+                        child.material.emissiveIntensity = 0.2 // Reduced intensity
+                      }
+                    }
+                  })
+
+                  // Center and scale model (từ test folder)
+                  const box = new THREE.Box3().setFromObject(satellite)
+                  const center = box.getCenter(new THREE.Vector3())
+                  const size = box.getSize(new THREE.Vector3())
+                  
+                  console.log('Model original size:', size)
+                  console.log('Model center:', center)
+                  
+                  // Center the model
+                  satellite.position.sub(center)
+                  
+                  // Scale to 3.5 size
+                  const maxDim = Math.max(size.x, size.y, size.z)
+                  let scale = 1
+                  if (maxDim > 0) {
+                    scale = 3.8 / maxDim  // Increased to 3.5 as requested
+                  }
+                  satellite.scale.setScalar(scale)
+                  
+                  // 🎯 Position satellite HIGHER inside LEO Zone (well above moon orbit)
+                  // LEO Zone runs from layer.altitude-0.5 to layer.altitude+0.5 approximately
+                  const leoInnerRadius = layer.altitude + 0.3  // Even higher position in LEO zone
+                  const leoOrbitRadius = leoInnerRadius + Math.random() * 0.3  // Top part of zone
+                  
+                  satellite.position.set(leoOrbitRadius, 0, 0)
+                  
+                  // Subtle glowing effect - normal color
+                  const glowGeometry = new THREE.SphereGeometry(0.6, 16, 16) // Much smaller from 1.0
+                  const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x0088bb, // More normal blue-cyan
+                    transparent: true,
+                    opacity: 0.12, // Even dimmer
+                    blending: THREE.AdditiveBlending,
+                  })
+                  const glow = new THREE.Mesh(glowGeometry, glowMaterial)
+                  glow.position.copy(satellite.position)
+                  
+                  // Store animation data for true free-floating motion in LEO zone
+                  satellite.userData = {
+                    type: 'aerolabsSatellite',
+                    leoInnerRadius: leoInnerRadius,
+                    leoOuterRadius: leoInnerRadius + 0.3, // Smaller range in highest LEO zone
+                    movementSpeed: 0.008,      // Increased speed for visible movement
+                    rotationSpeed: 0.002,      // Self rotation speed
+                    phaseX: Math.random() * Math.PI * 2,  // Random phase for X movement
+                    phaseY: Math.random() * Math.PI * 2,  // Random phase for Y movement
+                    phaseZ: Math.random() * Math.PI * 2,  // Random phase for Z movement
+                    glow: glow,
+                    originalSize: size.clone(),
+                    appliedScale: scale
+                  }
+                  
+                  scene.add(satellite)
+                  scene.add(glow)
+                  
+                  console.log(`🛰️ Satellite positioned INSIDE LEO Zone at radius: ${leoOrbitRadius}`)
+                  console.log(`LEO Zone altitude: ${layer.altitude}, Inner radius: ${leoInnerRadius}`)
+                  console.log(`Applied scale: ${scale} for maxDim: ${maxDim}`)
+                  console.log(`Satellite final position:`, satellite.position)
+                  console.log(`Satellite final scale:`, satellite.scale)
+                },
+                (progress) => {
+                  const percent = Math.round((progress.loaded / progress.total) * 100)
+                  console.log(`📡 Loading AeroLabs Satellite: ${percent}%`)
+                },
+                (error) => {
+                  console.error('❌ Failed to load AeroLabs Satellite:', error)
+                  console.log('Creating fallback satellite inside LEO Zone...')
+                  
+                  // Fallback satellite nếu GLB load failed
+                  const fallbackGroup = new THREE.Group()
+                  
+                  // Satellite body
+                  const bodyGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.4, 8)
+                  const bodyMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0x999999,
+                    emissive: 0x001122, // Normal emissive to match main satellite
+                    emissiveIntensity: 0.2
+                  })
+                  const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
+                  fallbackGroup.add(body)
+
+                  // Solar panels
+                  const panelGeometry = new THREE.BoxGeometry(0.6, 0.02, 0.3)
+                  const panelMaterial = new THREE.MeshPhongMaterial({ color: 0x002266 })
+                  
+                  const panel1 = new THREE.Mesh(panelGeometry, panelMaterial)
+                  panel1.position.set(0.4, 0, 0)
+                  fallbackGroup.add(panel1)
+                  
+                  const panel2 = new THREE.Mesh(panelGeometry, panelMaterial)
+                  panel2.position.set(-0.4, 0, 0)
+                  fallbackGroup.add(panel2)
+
+                  // Position inside highest LEO zone (well above moon orbit)
+                  const leoOrbitRadius = layer.altitude + 0.4  // Much higher position
+                  fallbackGroup.position.set(leoOrbitRadius, 0, 0)
+                  
+                  // Add glow
+                  const fallbackGlow = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.5, 16, 16),
+                    new THREE.MeshBasicMaterial({
+                      color: 0x00aaff,
+                      transparent: true,
+                      opacity: 0.15,
+                      blending: THREE.AdditiveBlending,
+                    })
+                  )
+                  fallbackGlow.position.copy(fallbackGroup.position)
+                  
+                  fallbackGroup.userData = {
+                    type: 'aerolabsSatellite',
+                    leoInnerRadius: layer.altitude + 0.3,  // Much higher LEO position
+                    leoOuterRadius: layer.altitude + 0.6,  // Highest LEO boundary
+                    movementSpeed: 0.008,  // Increased speed
+                    rotationSpeed: 0.002,
+                    phaseX: Math.random() * Math.PI * 2,
+                    phaseY: Math.random() * Math.PI * 2,
+                    phaseZ: Math.random() * Math.PI * 2,
+                    glow: fallbackGlow,
+                    isFallback: true
+                  }
+
+                  scene.add(fallbackGroup)
+                  scene.add(fallbackGlow)
+                  
+                  console.log('🛰️ Fallback satellite created inside LEO Zone')
+                }
+              )
+            }
+            
+            // Start loading satellite
+            loadAeroLabsSatellite()
           }
         })
 
@@ -664,6 +828,45 @@ export function HeroSection() {
           scene.children.forEach((child: any) => {
             if (child.userData.type === "leoParticles") {
               child.rotation.y += 0.01
+            }
+            
+            // 🛰️ Animate AeroLabs Satellite with ENHANCED free-floating motion in LEO Zone
+            if (child.userData.type === "aerolabsSatellite") {
+              const userData = child.userData
+              const t = time * userData.movementSpeed
+              
+              // Calculate 3D position with stronger movement
+              const radiusVariation = userData.leoInnerRadius + 
+                (userData.leoOuterRadius - userData.leoInnerRadius) * 
+                (0.5 + 0.5 * Math.sin(t + userData.phaseX))
+              
+              // 3D coordinates with MORE pronounced movement
+              const angleXZ = t * 1.2 + userData.phaseX  // Faster rotation around Y axis
+              const angleY = t * 0.8 + userData.phaseY   // Faster up/down movement
+              
+              child.position.x = Math.cos(angleXZ) * radiusVariation
+              child.position.z = Math.sin(angleXZ) * radiusVariation
+              child.position.y = Math.sin(angleY + userData.phaseZ) * 2.5  // BIGGER vertical range
+              
+              // Add MORE floating motion for visible movement
+              child.position.x += Math.sin(t * 2.1 + userData.phaseY) * 1.2  // Increased amplitude
+              child.position.z += Math.cos(t * 1.8 + userData.phaseZ) * 1.2  // Increased amplitude
+              child.position.y += Math.cos(t * 1.5 + userData.phaseX) * 1.0  // Bigger vertical float
+              
+              // Multi-axis rotation for realistic tumbling
+              child.rotation.x += userData.rotationSpeed * 0.7
+              child.rotation.y += userData.rotationSpeed
+              child.rotation.z += userData.rotationSpeed * 0.4
+              
+              // Update glow position and reduce pulsing intensity
+              if (userData.glow) {
+                userData.glow.position.copy(child.position)
+                
+                // Subtle pulsing effect with normal opacity
+                const pulse = 1 + Math.sin(t * 2 + userData.phaseX) * 0.08  // Very subtle pulsing
+                userData.glow.scale.setScalar(pulse)
+                userData.glow.material.opacity = 0.12 + Math.sin(t * 1.5 + userData.phaseY) * 0.03  // Normal range
+              }
             }
           })
 

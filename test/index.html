@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroLabs Satellite - GLB Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #loadingText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            z-index: 100;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 14px;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        #error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            font-size: 16px;
+            z-index: 100;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="loadingText">Loading AeroLabs Satellite...</div>
+        <div id="controls">
+            <div>Controls:</div>
+            <div>• Mouse: Rotate view</div>
+            <div>• Wheel: Zoom in/out</div>
+            <div>• Right click + drag: Pan</div>
+        </div>
+        <div id="error">
+            <div>Error loading the GLB model!</div>
+            <div>Please check the console for details.</div>
+        </div>
+    </div>
+
+    <!-- Import map cho Three.js ES6 modules -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = false;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1;
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = false;
+        controls.minDistance = 1;
+        controls.maxDistance = 100;
+
+        // Lighting - Multi-directional lighting for better visibility
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+        scene.add(ambientLight);
+
+        // Main directional light (front-top)
+        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight1.position.set(10, 10, 5);
+        directionalLight1.castShadow = false;
+        scene.add(directionalLight1);
+
+        // Back light (back-top)
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
+        directionalLight2.position.set(-10, 10, -5);
+        directionalLight2.castShadow = false;
+        scene.add(directionalLight2);
+
+        // Side lights (left and right)
+        const directionalLight3 = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight3.position.set(-10, 0, 10);
+        directionalLight3.castShadow = false;
+        scene.add(directionalLight3);
+
+        const directionalLight4 = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight4.position.set(10, 0, -10);
+        directionalLight4.castShadow = false;
+        scene.add(directionalLight4);
+
+        // Bottom light (from below)
+        const directionalLight5 = new THREE.DirectionalLight(0xffffff, 0.3);
+        directionalLight5.position.set(0, -10, 0);
+        directionalLight5.castShadow = false;
+        scene.add(directionalLight5);
+
+        const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x654321, 0.4);
+        scene.add(hemisphereLight);
+
+        // Background
+        scene.background = new THREE.Color(0x111111);
+
+        // Load GLB model
+        const loader = new GLTFLoader();
+        let model = null;
+
+        loader.load(
+            'AeroLabs Satellite.glb',
+            function (gltf) {
+                model = gltf.scene;
+                
+                // Disable shadows for better visibility
+                model.traverse(function (child) {
+                    if (child.isMesh) {
+                        child.castShadow = false;
+                        child.receiveShadow = false;
+                    }
+                });
+
+                scene.add(model);
+
+                // Center and scale the model
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+                // Center the model
+                model.position.sub(center);
+
+                // Scale if needed
+                const maxDim = Math.max(size.x, size.y, size.z);
+                if (maxDim > 5) {
+                    const scale = 5 / maxDim;
+                    model.scale.setScalar(scale);
+                }
+
+                // Position camera
+                const distance = Math.max(size.x, size.y, size.z) * 2;
+                camera.position.set(distance, distance, distance);
+                camera.lookAt(0, 0, 0);
+                controls.target.set(0, 0, 0);
+                controls.update();
+
+                // Hide loading text
+                document.getElementById('loadingText').style.display = 'none';
+                
+                console.log('GLB model loaded successfully!');
+                console.log('Model size:', size);
+                console.log('Model center:', center);
+            },
+            function (progress) {
+                const percent = Math.round((progress.loaded / progress.total) * 100);
+                document.getElementById('loadingText').textContent = `Loading AeroLabs Satellite... ${percent}%`;
+            },
+            function (error) {
+                console.error('Error loading GLB model:', error);
+                document.getElementById('loadingText').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+            }
+        );
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            controls.update();
+            
+            // Rotate model slowly if loaded
+            if (model) {
+                model.rotation.y += 0.005;
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
