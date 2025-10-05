@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowDown, Sparkles } from "lucide-react"
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 interface AtmosphereLayer {
   name: string
@@ -433,6 +435,160 @@ export function HeroSection() {
             const particles = new THREE.Points(particleGeometry, particleMaterial)
             particles.userData = { type: "leoParticles" }
             scene.add(particles)
+
+            // 🛰️ Load AeroLabs Satellite GLB INSIDE LEO Zone (based on test folder approach)
+            const loadAeroLabsSatellite = () => {
+              console.log('🛰️ Starting AeroLabs Satellite loading...')
+              const gltfLoader = new GLTFLoader()
+              
+              gltfLoader.load(
+                '/AeroLabs Satellite.glb',
+                (gltf) => {
+                  console.log('✅ AeroLabs Satellite loaded successfully!', gltf)
+                  
+                  const satellite = gltf.scene
+                  
+                  // Apply test folder approach - disable shadows
+                  satellite.traverse((child) => {
+                    if (child.isMesh) {
+                      child.castShadow = false
+                      child.receiveShadow = false
+                      
+                      // Enhanced materials for space visibility
+                      if (child.material) {
+                        child.material.metalness = 0.8
+                        child.material.roughness = 0.2
+                        child.material.emissive = new THREE.Color(0x003366)
+                        child.material.emissiveIntensity = 0.3
+                      }
+                    }
+                  })
+
+                  // Center and scale model (từ test folder)
+                  const box = new THREE.Box3().setFromObject(satellite)
+                  const center = box.getCenter(new THREE.Vector3())
+                  const size = box.getSize(new THREE.Vector3())
+                  
+                  console.log('Model original size:', size)
+                  console.log('Model center:', center)
+                  
+                  // Center the model
+                  satellite.position.sub(center)
+                  
+                  // Scale for visibility (từ test nhưng adjust cho LEO zone)
+                  const maxDim = Math.max(size.x, size.y, size.z)
+                  let scale = 1
+                  if (maxDim > 0) {
+                    scale = 2.5 / maxDim  // Make it 2.5 units for better visibility
+                  }
+                  satellite.scale.setScalar(scale)
+                  
+                  // 🎯 Position satellite INSIDE LEO Zone (not on surface)
+                  // LEO Zone runs from layer.altitude-0.5 to layer.altitude+0.5 approximately
+                  const leoInnerRadius = layer.altitude - 0.3  // Inside the zone
+                  const leoOrbitRadius = leoInnerRadius + Math.random() * 0.6  // Random within zone
+                  
+                  satellite.position.set(leoOrbitRadius, 0, 0)
+                  
+                  // Add glowing effect để thấy trong không gian
+                  const glowGeometry = new THREE.SphereGeometry(0.8, 16, 16)
+                  const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00aaff,
+                    transparent: true,
+                    opacity: 0.2,
+                    blending: THREE.AdditiveBlending,
+                  })
+                  const glow = new THREE.Mesh(glowGeometry, glowMaterial)
+                  glow.position.copy(satellite.position)
+                  
+                  // Store animation data
+                  satellite.userData = {
+                    type: 'aerolabsSatellite',
+                    orbitRadius: leoOrbitRadius,
+                    orbitSpeed: 0.01,      // Orbital speed
+                    rotationSpeed: 0.005,  // Self rotation
+                    glow: glow,
+                    originalSize: size.clone(),
+                    appliedScale: scale
+                  }
+                  
+                  scene.add(satellite)
+                  scene.add(glow)
+                  
+                  console.log(`🛰️ Satellite positioned INSIDE LEO Zone at radius: ${leoOrbitRadius}`)
+                  console.log(`LEO Zone altitude: ${layer.altitude}, Inner radius: ${leoInnerRadius}`)
+                  console.log(`Applied scale: ${scale} for maxDim: ${maxDim}`)
+                  console.log(`Satellite final position:`, satellite.position)
+                  console.log(`Satellite final scale:`, satellite.scale)
+                },
+                (progress) => {
+                  const percent = Math.round((progress.loaded / progress.total) * 100)
+                  console.log(`📡 Loading AeroLabs Satellite: ${percent}%`)
+                },
+                (error) => {
+                  console.error('❌ Failed to load AeroLabs Satellite:', error)
+                  console.log('Creating fallback satellite inside LEO Zone...')
+                  
+                  // Fallback satellite nếu GLB load failed
+                  const fallbackGroup = new THREE.Group()
+                  
+                  // Satellite body
+                  const bodyGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.4, 8)
+                  const bodyMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0x999999,
+                    emissive: 0x003366,
+                    emissiveIntensity: 0.2
+                  })
+                  const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
+                  fallbackGroup.add(body)
+
+                  // Solar panels
+                  const panelGeometry = new THREE.BoxGeometry(0.6, 0.02, 0.3)
+                  const panelMaterial = new THREE.MeshPhongMaterial({ color: 0x002266 })
+                  
+                  const panel1 = new THREE.Mesh(panelGeometry, panelMaterial)
+                  panel1.position.set(0.4, 0, 0)
+                  fallbackGroup.add(panel1)
+                  
+                  const panel2 = new THREE.Mesh(panelGeometry, panelMaterial)
+                  panel2.position.set(-0.4, 0, 0)
+                  fallbackGroup.add(panel2)
+
+                  // Position inside LEO zone
+                  const leoOrbitRadius = layer.altitude - 0.2
+                  fallbackGroup.position.set(leoOrbitRadius, 0, 0)
+                  
+                  // Add glow
+                  const fallbackGlow = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.5, 16, 16),
+                    new THREE.MeshBasicMaterial({
+                      color: 0x00aaff,
+                      transparent: true,
+                      opacity: 0.15,
+                      blending: THREE.AdditiveBlending,
+                    })
+                  )
+                  fallbackGlow.position.copy(fallbackGroup.position)
+                  
+                  fallbackGroup.userData = {
+                    type: 'aerolabsSatellite',
+                    orbitRadius: leoOrbitRadius,
+                    orbitSpeed: 0.01,
+                    rotationSpeed: 0.005,
+                    glow: fallbackGlow,
+                    isFallback: true
+                  }
+
+                  scene.add(fallbackGroup)
+                  scene.add(fallbackGlow)
+                  
+                  console.log('🛰️ Fallback satellite created inside LEO Zone')
+                }
+              )
+            }
+            
+            // Start loading satellite
+            loadAeroLabsSatellite()
           }
         })
 
@@ -664,6 +820,30 @@ export function HeroSection() {
           scene.children.forEach((child: any) => {
             if (child.userData.type === "leoParticles") {
               child.rotation.y += 0.01
+            }
+            
+            // 🛰️ Animate AeroLabs Satellite inside LEO Zone
+            if (child.userData.type === "aerolabsSatellite") {
+              const orbitTime = time * child.userData.orbitSpeed
+              
+              // Orbital motion INSIDE LEO zone
+              child.position.x = Math.cos(orbitTime) * child.userData.orbitRadius
+              child.position.z = Math.sin(orbitTime) * child.userData.orbitRadius
+              // Add slight vertical movement to simulate 3D orbit
+              child.position.y = Math.sin(orbitTime * 1.3) * 0.2
+              
+              // Self rotation
+              child.rotation.y += child.userData.rotationSpeed
+              child.rotation.x += child.userData.rotationSpeed * 0.3
+              
+              // Update glow position to follow satellite
+              if (child.userData.glow) {
+                child.userData.glow.position.copy(child.position)
+                
+                // Subtle pulsing glow effect
+                const glowPulse = 1 + Math.sin(time * 2) * 0.1
+                child.userData.glow.scale.setScalar(glowPulse)
+              }
             }
           })
 
