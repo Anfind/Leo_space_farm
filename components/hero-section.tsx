@@ -454,12 +454,12 @@ export function HeroSection() {
                       child.castShadow = false
                       child.receiveShadow = false
                       
-                      // Enhanced materials for better visibility
+                      // Normal materials - less bright blue
                       if (child.material) {
-                        child.material.metalness = 0.9
-                        child.material.roughness = 0.1
-                        child.material.emissive = new THREE.Color(0x0066aa) // Brighter blue emissive
-                        child.material.emissiveIntensity = 0.6 // Much brighter from 0.3
+                        child.material.metalness = 0.8
+                        child.material.roughness = 0.2
+                        child.material.emissive = new THREE.Color(0x001122) // Much dimmer blue
+                        child.material.emissiveIntensity = 0.2 // Reduced intensity
                       }
                     }
                   })
@@ -475,11 +475,11 @@ export function HeroSection() {
                   // Center the model
                   satellite.position.sub(center)
                   
-                  // Scale for good visibility but not too big
+                  // Scale to 3.5 size
                   const maxDim = Math.max(size.x, size.y, size.z)
                   let scale = 1
                   if (maxDim > 0) {
-                    scale = 3.0 / maxDim  // Reduced back from 4.0 to 2.0
+                    scale = 3.5 / maxDim  // Increased to 3.5 as requested
                   }
                   satellite.scale.setScalar(scale)
                   
@@ -490,12 +490,12 @@ export function HeroSection() {
                   
                   satellite.position.set(leoOrbitRadius, 0, 0)
                   
-                  // Subtle glowing effect - smaller and dimmer
+                  // Subtle glowing effect - normal color
                   const glowGeometry = new THREE.SphereGeometry(0.6, 16, 16) // Much smaller from 1.0
                   const glowMaterial = new THREE.MeshBasicMaterial({
-                    color: 0x00aadd, // Slightly dimmer cyan
+                    color: 0x0088bb, // More normal blue-cyan
                     transparent: true,
-                    opacity: 0.15, // Much dimmer from 0.3
+                    opacity: 0.12, // Even dimmer
                     blending: THREE.AdditiveBlending,
                   })
                   const glow = new THREE.Mesh(glowGeometry, glowMaterial)
@@ -540,7 +540,7 @@ export function HeroSection() {
                   const bodyGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.4, 8)
                   const bodyMaterial = new THREE.MeshPhongMaterial({ 
                     color: 0x999999,
-                    emissive: 0x003366,
+                    emissive: 0x001122, // Normal emissive to match main satellite
                     emissiveIntensity: 0.2
                   })
                   const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
@@ -862,10 +862,10 @@ export function HeroSection() {
               if (userData.glow) {
                 userData.glow.position.copy(child.position)
                 
-                // Subtle pulsing effect
-                const pulse = 1 + Math.sin(t * 2 + userData.phaseX) * 0.1  // Reduced pulsing
+                // Subtle pulsing effect with normal opacity
+                const pulse = 1 + Math.sin(t * 2 + userData.phaseX) * 0.08  // Very subtle pulsing
                 userData.glow.scale.setScalar(pulse)
-                userData.glow.material.opacity = 0.15 + Math.sin(t * 1.5 + userData.phaseY) * 0.05  // Dimmer
+                userData.glow.material.opacity = 0.12 + Math.sin(t * 1.5 + userData.phaseY) * 0.03  // Normal range
               }
             }
           })
