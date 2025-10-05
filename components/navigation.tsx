@@ -1,8 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
+import Image from "next/image"
 
 export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -32,11 +34,15 @@ export function Navigation() {
     >
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent border-2 border-primary/50 flex items-center justify-center shadow-lg shadow-primary/20">
-              <span className="text-primary-foreground font-bold text-lg">L</span>
-            </div>
-            <span className="text-xl font-bold text-foreground">LEO Farm</span>
+          <div className="flex items-center gap-3">
+            <Image 
+              src="/aero-labs-logo.png" 
+              alt="Aero Labs Logo" 
+              width={120} 
+              height={40}
+              className="h-8 w-auto"
+              priority
+            />
           </div>
 
           {/* Desktop Navigation */}

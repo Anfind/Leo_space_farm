@@ -5,8 +5,8 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Aero Labs',
-  description: 'Created with Aero Labs',
+  title: 'Aero Labs - Space Agriculture Platform',
+  description: 'Revolutionary space farming technology in Low Earth Orbit - Aero Labs',
   generator: 'Aero Labs',
 }
 

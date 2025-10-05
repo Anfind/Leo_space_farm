@@ -966,7 +966,7 @@ export function HeroSection() {
             </div>
             {hoveredLayerData.name === "LEO Zone" && (
               <div className="pt-2 border-t border-border/50">
-                <span className="text-primary text-xs font-medium">🚀 Oriviet Operations Zone</span>
+                <span className="text-primary text-xs font-medium">🚀 Aero Labs Operations Zone</span>
               </div>
             )}
           </div>
@@ -993,7 +993,7 @@ export function HeroSection() {
           style={{ pointerEvents: "auto" }}
         >
           <Sparkles size={16} className="text-primary" />
-          <span className="text-sm text-primary font-medium">Powered by Oriviet</span>
+          <span className="text-sm text-primary font-medium">Powered by Aero Labs</span>
         </div>
 
         <h1 
@@ -1001,7 +1001,7 @@ export function HeroSection() {
           style={{ pointerEvents: "auto" }}
         >
           <span className="block text-glow relative">
-            Oriviet
+            Aero Labs
           </span>
           <span className="block text-3xl md:text-4xl mt-4 text-muted-foreground font-normal">
             Space Agriculture Revolution
@@ -1018,7 +1018,7 @@ export function HeroSection() {
           style={{ pointerEvents: "auto" }}
         >
           <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 group">
-            Explore Oriviet
+            Explore Aero Labs
             <ArrowDown className="ml-2 group-hover:translate-y-1 transition-transform" size={18} />
           </Button>
           <Button
@@ -1073,7 +1073,7 @@ export function HeroSection() {
           user-select: none;
         }
 
-        /* Glow effect behind Oriviet text */
+        /* Glow effect behind Aero Labs text */
         .text-glow {
           color: #ffffff;
           position: relative;
@@ -1081,7 +1081,7 @@ export function HeroSection() {
         }
 
         .text-glow::before {
-          content: 'Oriviet';
+          content: 'Aero Labs';
           position: absolute;
           top: 0;
           left: 0;
