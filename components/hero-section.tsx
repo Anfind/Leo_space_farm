@@ -479,14 +479,14 @@ export function HeroSection() {
                   const maxDim = Math.max(size.x, size.y, size.z)
                   let scale = 1
                   if (maxDim > 0) {
-                    scale = 3.5 / maxDim  // Increased to 3.5 as requested
+                    scale = 3.8 / maxDim  // Increased to 3.5 as requested
                   }
                   satellite.scale.setScalar(scale)
                   
-                  // 🎯 Position satellite INSIDE LEO Zone (not on surface)
+                  // 🎯 Position satellite HIGHER inside LEO Zone (well above moon orbit)
                   // LEO Zone runs from layer.altitude-0.5 to layer.altitude+0.5 approximately
-                  const leoInnerRadius = layer.altitude - 0.3  // Inside the zone
-                  const leoOrbitRadius = leoInnerRadius + Math.random() * 0.6  // Random within zone
+                  const leoInnerRadius = layer.altitude + 0.3  // Even higher position in LEO zone
+                  const leoOrbitRadius = leoInnerRadius + Math.random() * 0.3  // Top part of zone
                   
                   satellite.position.set(leoOrbitRadius, 0, 0)
                   
@@ -505,7 +505,7 @@ export function HeroSection() {
                   satellite.userData = {
                     type: 'aerolabsSatellite',
                     leoInnerRadius: leoInnerRadius,
-                    leoOuterRadius: leoInnerRadius + 0.6, // LEO zone outer boundary
+                    leoOuterRadius: leoInnerRadius + 0.3, // Smaller range in highest LEO zone
                     movementSpeed: 0.008,      // Increased speed for visible movement
                     rotationSpeed: 0.002,      // Self rotation speed
                     phaseX: Math.random() * Math.PI * 2,  // Random phase for X movement
@@ -558,8 +558,8 @@ export function HeroSection() {
                   panel2.position.set(-0.4, 0, 0)
                   fallbackGroup.add(panel2)
 
-                  // Position inside LEO zone
-                  const leoOrbitRadius = layer.altitude - 0.2
+                  // Position inside highest LEO zone (well above moon orbit)
+                  const leoOrbitRadius = layer.altitude + 0.4  // Much higher position
                   fallbackGroup.position.set(leoOrbitRadius, 0, 0)
                   
                   // Add glow
@@ -576,8 +576,8 @@ export function HeroSection() {
                   
                   fallbackGroup.userData = {
                     type: 'aerolabsSatellite',
-                    leoInnerRadius: layer.altitude - 0.3,
-                    leoOuterRadius: layer.altitude + 0.3,
+                    leoInnerRadius: layer.altitude + 0.3,  // Much higher LEO position
+                    leoOuterRadius: layer.altitude + 0.6,  // Highest LEO boundary
                     movementSpeed: 0.008,  // Increased speed
                     rotationSpeed: 0.002,
                     phaseX: Math.random() * Math.PI * 2,
