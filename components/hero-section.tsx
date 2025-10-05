@@ -454,12 +454,12 @@ export function HeroSection() {
                       child.castShadow = false
                       child.receiveShadow = false
                       
-                      // Enhanced materials for space visibility
+                      // Enhanced materials for better visibility
                       if (child.material) {
-                        child.material.metalness = 0.8
-                        child.material.roughness = 0.2
-                        child.material.emissive = new THREE.Color(0x003366)
-                        child.material.emissiveIntensity = 0.3
+                        child.material.metalness = 0.9
+                        child.material.roughness = 0.1
+                        child.material.emissive = new THREE.Color(0x0066aa) // Brighter blue emissive
+                        child.material.emissiveIntensity = 0.6 // Much brighter from 0.3
                       }
                     }
                   })
@@ -475,11 +475,11 @@ export function HeroSection() {
                   // Center the model
                   satellite.position.sub(center)
                   
-                  // Scale for visibility (từ test nhưng adjust cho LEO zone)
+                  // Scale for better visibility - make it bigger
                   const maxDim = Math.max(size.x, size.y, size.z)
                   let scale = 1
                   if (maxDim > 0) {
-                    scale = 2.5 / maxDim  // Make it 2.5 units for better visibility
+                    scale = 4.0 / maxDim  // Increased from 2.5 to 4.0 - much bigger
                   }
                   satellite.scale.setScalar(scale)
                   
@@ -490,26 +490,30 @@ export function HeroSection() {
                   
                   satellite.position.set(leoOrbitRadius, 0, 0)
                   
-                  // Add glowing effect để thấy trong không gian
-                  const glowGeometry = new THREE.SphereGeometry(1.2, 16, 16) // Increased from 0.8
+                  // Enhanced glowing effect - bigger and brighter
+                  const glowGeometry = new THREE.SphereGeometry(2.0, 16, 16) // Increased from 1.2
                   const glowMaterial = new THREE.MeshBasicMaterial({
-                    color: 0x00aaff,
+                    color: 0x00ccff, // Brighter cyan color
                     transparent: true,
-                    opacity: 0.25, // Increased from 0.2
+                    opacity: 0.4, // Much brighter from 0.25
                     blending: THREE.AdditiveBlending,
                   })
                   const glow = new THREE.Mesh(glowGeometry, glowMaterial)
                   glow.position.copy(satellite.position)
                   
-                  // Store animation data
+                  // Store animation data for free-floating motion
                   satellite.userData = {
                     type: 'aerolabsSatellite',
                     orbitRadius: leoOrbitRadius,
-                    orbitSpeed: 0.01,      // Orbital speed
-                    rotationSpeed: 0.005,  // Self rotation
+                    orbitSpeed: 0.004,      // Much slower orbital speed
+                    rotationSpeed: 0.002,   // Slower self rotation
+                    floatSpeed: 0.003,      // Additional floating motion
+                    phaseOffset: Math.random() * Math.PI * 2, // Random starting phase
                     glow: glow,
                     originalSize: size.clone(),
-                    appliedScale: scale
+                    appliedScale: scale,
+                    leoInnerRadius: leoInnerRadius,
+                    leoZoneWidth: 0.6       // LEO zone thickness for floating
                   }
                   
                   scene.add(satellite)
@@ -573,9 +577,13 @@ export function HeroSection() {
                   fallbackGroup.userData = {
                     type: 'aerolabsSatellite',
                     orbitRadius: leoOrbitRadius,
-                    orbitSpeed: 0.01,
-                    rotationSpeed: 0.005,
+                    orbitSpeed: 0.004,
+                    rotationSpeed: 0.002,
+                    floatSpeed: 0.003,
+                    phaseOffset: Math.random() * Math.PI * 2,
                     glow: fallbackGlow,
+                    leoInnerRadius: layer.altitude - 0.3,
+                    leoZoneWidth: 0.6,
                     isFallback: true
                   }
 
@@ -822,27 +830,44 @@ export function HeroSection() {
               child.rotation.y += 0.01
             }
             
-            // 🛰️ Animate AeroLabs Satellite inside LEO Zone
+            // 🛰️ Animate AeroLabs Satellite with free-floating motion inside LEO Zone
             if (child.userData.type === "aerolabsSatellite") {
-              const orbitTime = time * child.userData.orbitSpeed
+              const userData = child.userData
+              const orbitTime = time * userData.orbitSpeed + userData.phaseOffset
+              const floatTime = time * userData.floatSpeed
               
-              // Orbital motion INSIDE LEO zone
-              child.position.x = Math.cos(orbitTime) * child.userData.orbitRadius
-              child.position.z = Math.sin(orbitTime) * child.userData.orbitRadius
-              // Add slight vertical movement to simulate 3D orbit
-              child.position.y = Math.sin(orbitTime * 1.3) * 0.2
+              // Base orbital motion (slower)
+              const baseX = Math.cos(orbitTime) * userData.orbitRadius
+              const baseZ = Math.sin(orbitTime) * userData.orbitRadius
               
-              // Self rotation
-              child.rotation.y += child.userData.rotationSpeed
-              child.rotation.x += child.userData.rotationSpeed * 0.3
+              // Add floating motion within LEO zone boundaries
+              const floatRadius = userData.leoZoneWidth * 0.3 // Float within 30% of zone width
+              const floatX = Math.cos(floatTime * 1.7) * floatRadius
+              const floatZ = Math.sin(floatTime * 1.3) * floatRadius
+              const floatY = Math.sin(floatTime * 2.1) * (floatRadius * 0.5)
               
-              // Update glow position to follow satellite
-              if (child.userData.glow) {
-                child.userData.glow.position.copy(child.position)
+              // Combine base orbit with floating motion
+              child.position.x = baseX + floatX
+              child.position.z = baseZ + floatZ
+              child.position.y = floatY
+              
+              // Slow, natural self rotation with multiple axes
+              child.rotation.y += userData.rotationSpeed
+              child.rotation.x += userData.rotationSpeed * 0.7
+              child.rotation.z += userData.rotationSpeed * 0.3
+              
+              // Update glow position and enhanced pulsing
+              if (userData.glow) {
+                userData.glow.position.copy(child.position)
                 
-                // Subtle pulsing glow effect
-                const glowPulse = 1 + Math.sin(time * 2) * 0.1
-                child.userData.glow.scale.setScalar(glowPulse)
+                // Enhanced pulsing with multiple frequencies
+                const pulse1 = Math.sin(time * 1.5) * 0.15
+                const pulse2 = Math.sin(time * 0.8) * 0.1
+                const combinedPulse = 1 + pulse1 + pulse2
+                userData.glow.scale.setScalar(combinedPulse)
+                
+                // Vary glow intensity
+                userData.glow.material.opacity = 0.4 + pulse1 * 0.2
               }
             }
           })
